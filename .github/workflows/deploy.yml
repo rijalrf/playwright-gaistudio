@@ -1,0 +1,47 @@
+name: Deploy ke VPS
+
+on:
+  # Deploy otomatis setiap push ke main
+  push:
+    branches: [main]
+  # Bisa juga dijalankan manual dari tab Actions
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy ke VPS
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script_stop: true
+          script: |
+            set -e
+            cd $HOME/playwright-gaistudio
+
+            # Ambil kode terbaru
+            git fetch origin main
+            git reset --hard origin/main
+
+            # Install dependensi (hanya jika package-lock berubah, tapi aman selalu dijalankan)
+            npm ci
+
+            # Playwright: pastikan browser Chromium terpasang (skip jika sudah ada)
+            npx playwright install --with-deps chromium
+
+            # Restart servis via pm2
+            pm2 restart playwright-gaistudio --update-env || pm2 start src/server.js --name playwright-gaistudio
+
+            # Simpan daftar proses pm2 agar hidup setelah reboot
+            pm2 save
+
+            echo "Deploy selesai pada $(date)"
