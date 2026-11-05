@@ -22,7 +22,7 @@ async function downloadFile({
   trigger,
   downloadDir,
   customFilename = null,
-  timeout = 45000,
+  timeout = 12000,
   baselineSnapshot = [],
   targetBlobSrc = null
 }) {

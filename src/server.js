@@ -36,6 +36,25 @@ jobManager.setWorker(async (params, onProgress) => {
   return await ttsEngine.execute(params, onProgress);
 });
 
+// Opsional: buka browser + AI Studio lebih awal supaya job pertama tidak cold-start.
+if (String(process.env.PREWARM_BROWSER || '').toLowerCase() === 'true') {
+  console.log('[Server] PREWARM_BROWSER=true, membuka browser lebih awal...');
+  ttsEngine.warmup().catch((err) => console.warn('[Server] Prewarm browser gagal:', err.message));
+}
+
+// Pastikan Chrome tidak tertinggal saat service dihentikan (sesi browser dipakai ulang antar job).
+async function closeBrowserSession() {
+  await ttsEngine.shutdown().catch(() => {});
+}
+
+['SIGINT', 'SIGTERM'].forEach((signal) => {
+  process.on(signal, async () => {
+    console.log(`[Server] Menerima ${signal}, menutup sesi browser...`);
+    await closeBrowserSession();
+    process.exit(0);
+  });
+});
+
 function getBaseUrl(req) {
   const host = req.get('host') || `localhost:${PORT}`;
   const protocol = req.protocol || 'http';
@@ -106,7 +125,8 @@ app.post('/shutdown', apiKeyAuth, (req, res) => {
   res.status(202).json({ status: 'shutting_down' });
   res.once('finish', () => {
     console.log('[Server] Permintaan shutdown diterima dari local runner. Menghentikan service...');
-    server.close(() => {
+    server.close(async () => {
+      await closeBrowserSession();
       process.exit(0);
     });
   });

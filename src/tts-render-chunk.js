@@ -10,6 +10,23 @@ const {
 } = require('./audio-downloader');
 const { convertWavToMp3 } = require('./audio-converter');
 
+const DEFAULT_DOWNLOAD_TIMEOUT_MS = 12000;
+
+function isQuotaText(text) {
+  return /quota|limit reached|exceeded your current quota/i.test(String(text || ''));
+}
+
+function quotaExceededError(detail) {
+  const clean = String(detail || '').replace(/\s+/g, ' ').trim().slice(0, 180);
+  const err = new Error(
+    'Kuota harian Gemini TTS habis (HTTP 429).' +
+    (clean ? ` Google: "${clean}".` : '') +
+    ' Tunggu reset kuota (tengah malam Waktu Pasifik, sekitar 14:00 WIB) atau pakai akun Google lain.'
+  );
+  err.code = 'QUOTA_EXCEEDED';
+  return err;
+}
+
 /**
  * Menjalankan render dan mengunduh berkas audio untuk satu bagian (chunk) naskah.
  * @param {import('playwright').Page} page
@@ -29,6 +46,9 @@ async function renderChunkAudio(page, chunk, options) {
   });
   console.log(`\n[TtsEngine] Memproses Bagian [${chunk.index}/${chunk.total}] (${chunk.wordCount} kata)...`);
 
+  const tPart = Date.now();
+  const partTimings = {};
+
   // 1. Snapshot baseline audio elements dan download buttons sebelum RUN
   const baselineAudioSnapshot = await captureAudioElementsSnapshot(page);
   const baselineBlobUrls = extractBaselineBlobUrls(baselineAudioSnapshot);
@@ -37,12 +57,15 @@ async function renderChunkAudio(page, chunk, options) {
   // 2. Paste prompt naskah
   const promptTextarea = 'textarea[aria-label="Enter a prompt"]';
   const finalPrompt = formatSpeakerPrompt(chunk.promptText || chunk.text);
+  const tPaste = Date.now();
   await humanPaste(page, promptTextarea, finalPrompt);
-  await humanDelay(1500, 2200);
+  await humanDelay(500, 800);
+  partTimings.pasteMs = Date.now() - tPaste;
 
   // Siapkan listener respons jaringan backend Google AI Studio
   let apiDone = false;
   let apiTimestamp = 0;
+  let quotaDetail = null;
   let apiResponseResolver = null;
   const apiResponsePromise = new Promise(resolve => {
     apiResponseResolver = resolve;
@@ -51,7 +74,17 @@ async function renderChunkAudio(page, chunk, options) {
   const responseHandler = async res => {
     try {
       const u = res.url();
-      if (res.status() >= 400 && (u.includes('alkalimakersuite') || u.includes('generate-speech') || u.includes('predict') || u.includes('googleapis'))) {
+      const isApi = u.includes('alkalimakersuite') || u.includes('generate-speech') || u.includes('predict') || u.includes('googleapis');
+
+      // 429 = kuota Gemini TTS habis. Jangan lanjut menunggu render/unduh.
+      if (res.status() === 429) {
+        const body = await res.text().catch(() => '');
+        quotaDetail = body.slice(0, 300);
+        console.error(`\n[TtsEngine] ❌ KUOTA GEMINI TTS HABIS (HTTP 429): ${quotaDetail.replace(/\s+/g, ' ').slice(0, 200)}\n`);
+        return;
+      }
+
+      if (res.status() >= 400 && isApi) {
         const body = await res.text().catch(() => '');
         console.error(`\n[TtsEngine] ❌ Google API Error ${res.status()}: ${body.slice(0, 500)}\n`);
       }
@@ -82,10 +115,11 @@ async function renderChunkAudio(page, chunk, options) {
   // 4. Polling UI state sampai audio selesai dirender
   console.log('[TtsEngine] Menunggu Gemini merender audio...');
   const genStartTime = Date.now();
+  const tRender = Date.now();
   let lastReportSec = 0;
   let detectedTargetAudio = null;
 
-  await humanDelay(1500, 2500);
+  await humanDelay(600, 900);
 
   while (true) {
     const elapsedSec = Math.floor((Date.now() - genStartTime) / 1000);
@@ -151,11 +185,12 @@ async function renderChunkAudio(page, chunk, options) {
       }
 
       let errorMessage = null;
-      const errorNodes = document.querySelectorAll('mat-snack-bar-container, .error-message, [role="alert"], ms-banner');
+      const errorNodes = document.querySelectorAll('mat-snack-bar-container, .error-message, [role="alert"], ms-banner, mat-dialog-container, .mat-mdc-dialog-container');
       for (const el of errorNodes) {
         const txt = el.innerText.trim();
-        if (txt && (txt.includes('403') || txt.includes('400') || txt.includes('500') || txt.toLowerCase().includes('permission denied') || txt.toLowerCase().includes('rate limit') || txt.toLowerCase().includes('no speakers detected'))) {
-          errorMessage = txt.replace(/\s+/g, ' ');
+        const lower = txt.toLowerCase();
+        if (txt && (/quota/i.test(txt) || txt.includes('403') || txt.includes('400') || txt.includes('500') || lower.includes('permission denied') || lower.includes('rate limit') || lower.includes('no speakers detected'))) {
+          errorMessage = txt.replace(/\s+/g, ' ').slice(0, 300);
           break;
         }
       }
@@ -171,7 +206,15 @@ async function renderChunkAudio(page, chunk, options) {
       };
     }, { baselineUrls: baselineUrlsArray });
 
+    // Kuota habis: gagal cepat dengan pesan jelas, jangan menunggu render/unduh sia-sia.
+    if (quotaDetail) {
+      throw quotaExceededError(quotaDetail);
+    }
+
     if (uiState.errorMessage) {
+      if (isQuotaText(uiState.errorMessage)) {
+        throw quotaExceededError(uiState.errorMessage);
+      }
       throw new Error(`Google AI Studio merespons error: ${uiState.errorMessage}`);
     }
 
@@ -179,12 +222,15 @@ async function renderChunkAudio(page, chunk, options) {
       detectedTargetAudio = uiState.freshAudio;
     }
 
+    // Tombol download hanya dianggap tanda selesai bila backend benar-benar membalas 200,
+    // supaya error 429/kuota tidak disalahartikan sebagai "render selesai".
     const isGenerationComplete = (uiState.isFreshAudioReady && !uiState.isGenBusy) ||
       (uiState.isFreshAudioReady && apiDone && (Date.now() - apiTimestamp > 1200)) ||
-      (uiState.hasDownloadBtn && !uiState.isGenBusy && elapsedSec >= 4);
+      (uiState.hasDownloadBtn && apiDone && !uiState.isGenBusy && elapsedSec >= 4);
 
     if (isGenerationComplete) {
       console.log(`[TtsEngine] Render audio selesai terdeteksi (${elapsedSec}s)!`);
+      partTimings.renderMs = Date.now() - tRender;
       break;
     }
 
@@ -227,12 +273,13 @@ async function renderChunkAudio(page, chunk, options) {
   const downloadStartTime = Date.now();
   const filename = `gemini_tts_${downloadStartTime}_part${chunk.index}.wav`;
   const detectedBlobSrc = detectedTargetAudio ? (detectedTargetAudio.currentSrc || detectedTargetAudio.src) : null;
+  const tDownload = Date.now();
 
   const downloadResult = await downloadWithRetry({
     page,
     downloadDir: downloadsDir,
     customFilename: filename,
-    timeout: 25000,
+    timeout: Number(process.env.DOWNLOAD_TIMEOUT_MS) || DEFAULT_DOWNLOAD_TIMEOUT_MS,
     baselineSnapshot: baselineAudioSnapshot,
     targetBlobSrc: detectedBlobSrc,
     trigger: async () => {
@@ -245,6 +292,7 @@ async function renderChunkAudio(page, chunk, options) {
     }
   }, 1);
 
+  partTimings.downloadMs = Date.now() - tDownload;
   const downloadedPath = downloadResult.path;
 
   if (downloadedPath && fs.existsSync(downloadedPath)) {
@@ -258,7 +306,9 @@ async function renderChunkAudio(page, chunk, options) {
 
     try {
       console.log(`[TtsEngine] Mengonversi ${filename} ke format MP3 (192 kbps)...`);
+      const tConvert = Date.now();
       const mp3Path = await convertWavToMp3(downloadedPath);
+      partTimings.convertMs = Date.now() - tConvert;
       finalPath = mp3Path;
       finalFilename = path.basename(mp3Path);
       finalStats = fs.statSync(mp3Path);
@@ -266,6 +316,9 @@ async function renderChunkAudio(page, chunk, options) {
     } catch (convErr) {
       console.warn(`[TtsEngine] Konversi MP3 gagal, menggunakan fallback WAV: ${convErr.message}`);
     }
+
+    partTimings.totalMs = Date.now() - tPart;
+    console.log(`[TIMING] part ${chunk.index}: total=${partTimings.totalMs}ms | paste=${partTimings.pasteMs || 0}ms | render=${partTimings.renderMs || 0}ms | download=${partTimings.downloadMs || 0}ms | convert=${partTimings.convertMs || 0}ms`);
 
     return {
       partIndex: chunk.index,
@@ -279,7 +332,8 @@ async function renderChunkAudio(page, chunk, options) {
       textSnippet: chunk.text.slice(0, 80) + (chunk.text.length > 80 ? '...' : ''),
       wordCount: chunk.wordCount,
       wavFilePath: downloadedPath,
-      wavFilename: filename
+      wavFilename: filename,
+      timings: partTimings
     };
   }
 

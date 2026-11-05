@@ -1,4 +1,4 @@
-# AuStudio Playwright - Stealth Recorder & Automation Studio
+# AI Studio TTS Playwright - Stealth Recorder & Automation Studio
 
 Aplikasi Playwright modern dengan antarmuka web dan CLI untuk merekam langkah browser secara manual menggunakan **Google Chrome bawaan Windows**, dengan fitur **Auto-Save instan** dan proteksi **Anti-Bot Stealth** (lolos Cloudflare, Datadome, Akamai, dan bot detector lainnya).
 
@@ -36,7 +36,7 @@ Aplikasi Playwright modern dengan antarmuka web dan CLI untuk merekam langkah br
    - Jika Chrome tertutup mendadak atau listrik padam, seluruh langkah yang sudah dilakukan tetap 100% aman tersimpan.
 
 5. **Web Studio & Control Panel (Dashboard Modern)**
-   - Akses via `http://localhost:3000`.
+   - Akses via `http://localhost:3740`.
    - Desain modern dark mode dengan aksen glowing.
    - Live stream langkah yang terekam via WebSocket.
    - Tab kode Playwright dengan syntax preview dan tombol salin.
@@ -48,7 +48,7 @@ Aplikasi Playwright modern dengan antarmuka web dan CLI untuk merekam langkah br
 
 ### Langkah 1: Login & Simpan Sesi (Hanya Dilakukan Sekali)
 Cukup **klik 2x**:
-👉 **`LOGIN.bat`**
+👉 **`open-browser.bat`** (atau `npm run open-browser`)
 - Google Chrome Windows asli Anda akan terbuka di `https://aistudio.google.com/`.
 - Silakan login dengan akun Google Anda secara normal, selesaikan 2FA/verifikasi.
 - Setelah berhasil login ke halaman utama, kembali ke jendela hitam dan tekan **ENTER**.
@@ -58,7 +58,7 @@ Cukup **klik 2x**:
 
 ### Langkah 2: Rekam Alur Automasi Murni (Bebas dari Langkah Login)
 Setelah sesi tersimpan, kapan saja Anda ingin merekam langkah baru, cukup **klik 2x**:
-👉 **`REKAM.bat`**
+👉 **`npm run record`** (atau `node cli.js`)
 - Google Chrome akan terbuka **dalam keadaan SUDAH LOGIN** otomatis menggunakan sesi dari Langkah 1.
 - **Langkah login TIDAK AKAN PERNAH direkam ke dalam script** (URL `accounts.google.com`, password, dan tombol login otomatis difilter/diabaikan).
 - Anda hanya perlu merekam aksi aplikasi (misal: memilih template TTS, mengetik naskah suara, memilih voice, dan klik generate).
@@ -70,7 +70,7 @@ Setelah sesi tersimpan, kapan saja Anda ingin merekam langkah baru, cukup **klik
 ### Langkah 3: Auto-Run Test Hasil Rekaman (Otomatis Generate & Download)
 Untuk menguji dan memastikan seluruh langkah berjalan otomatis dari awal sampai akhir via REST API:
 Cukup **klik 2x**:
-👉 **`TEST_TTS_API.bat`**
+👉 **`npm run test:api`** (atau `test.bat`)
 - Menguji endpoint REST API TTS (`/api/tts/jobs`) secara live.
 - Memantau progres job hingga selesai dan memverifikasi file audio MP3 (192 kbps) terunduh di folder `downloads/`.
 
@@ -89,21 +89,22 @@ Server REST API lokal yang menyediakan pembuatan suara sintetis Gemini 2.5 Pro T
   - `GET /api/tts/jobs` — Riwayat & statistik antrian.
   - `DELETE /api/tts/jobs/:id` — Batalkan tugas yang sedang antre.
   - `POST /api/tts/generate` — Endpoint fleksibel (dukung `?sync=true` atau mode jobs).
+- Konfigurasi `.env`: `PORT`, `API_KEY`, dan `OFFSCREEN` (`false` = jendela Chrome tampil di layar untuk memantau proses; `true` = disembunyikan). Detail: [API_DOCUMENTATION.md](API_DOCUMENTATION.md).
 - Untuk dokumentasi lengkap dan contoh kode (Node.js, Python, PowerShell, cURL), baca [API_DOCUMENTATION.md](API_DOCUMENTATION.md).
 
 Untuk menjalankan server API:
-Cukup klik 2x 👉 **`START_SERVER.bat`** (atau jalankan `npm start`).
+Cukup klik 2x 👉 **`start-server.bat`** (atau jalankan `npm start`).
 
 ---
 
 ### Opsi Tambahan (Action Recorder):
-- Jika sewaktu-waktu Anda ingin melihat antarmuka visual / dashboard web, klik 2x **`START_AUSTUDIO.bat`** (membuka `http://localhost:3000`).
+- Jika sewaktu-waktu Anda ingin melihat antarmuka visual / dashboard web, jalankan server lalu buka `http://localhost:3740`.
 Jalankan perintah berikut di terminal:
 ```bash
 npm start
 ```
 Buka browser di:
-👉 **[http://localhost:3000](http://localhost:3000)**
+👉 **[http://localhost:3740](http://localhost:3740)**
 
 Langkah-langkah merekam via Web UI:
 1. Masukkan nama sesi (contoh: `my_flow_1`).
@@ -148,7 +149,7 @@ npm run test:stealth
 
 ## 📁 Struktur Direktori
 ```
-austudio-playwright/
+aistudiotts-playwright/
 ├── public/                 # Frontend Web Studio Dashboard
 │   ├── index.html          # HTML antarmuka dashboard
 │   ├── style.css           # Styling modern dark mode

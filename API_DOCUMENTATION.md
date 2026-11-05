@@ -1,4 +1,4 @@
-# 📖 Dokumentasi REST API - AuStudio Gemini TTS Service (Jobs Architecture)
+# 📖 Dokumentasi REST API - Google AI Studio TTS (Gemini 2.5 Pro)
 
 Layanan REST API lokal berkinerja tinggi untuk menghasilkan suara sintetis (*Text-to-Speech*) menggunakan model **Google Gemini 2.5 Pro Preview TTS** melalui browser automation berfitur **Anti-Bot Evasion & Human Behavior Engine**.
 
@@ -8,7 +8,7 @@ Menggunakan arsitektur **Asynchronous Job Queue (Teknik Jobs)** sehingga aman da
 
 ## 🚀 Ringkasan & Base URL
 
-* **Base URL**: `http://localhost:3000` (atau port lain sesuai port terbuka, misal `3001`)
+* **Base URL**: `http://localhost:3740` (sesuai variabel `PORT` di `.env`)
 * **Content-Type**: `application/json`
 * **Format Audio Output**: `.mp3` (192 kbps, konversi otomatis via `ffmpeg-static`) & `.wav` (PCM kualitas studio)
 * **Arsitektur Pemrosesan**: **Asynchronous Job Queue (Teknik Jobs)**
@@ -18,7 +18,7 @@ Menggunakan arsitektur **Asynchronous Job Queue (Teknik Jobs)** sehingga aman da
 
 ## ⚡ Mengapa Menggunakan Teknik Jobs?
 
-Proses sintesis suara AI Studio memerlukan waktu antara 15 hingga 120 detik (bahkan lebih untuk naskah panjang multi-chunk). 
+Proses sintesis suara AI Studio memerlukan waktu **±2–5 menit per job** (median 144 detik pada data operasional; maksimum 457 detik untuk naskah panjang multi-chunk). Rinciannya: setup browser + konfigurasi UI AI Studio ±1,5–2 menit, render Gemini ±5–10 detik, download ±3 detik, dan jeda 30 detik sebelum browser ditutup. Karena itu **jangan** memakai HTTP timeout pendek (< 300 detik) untuk mode sinkron.
 
 Dengan **Teknik Jobs**:
 1. **Bebas HTTP Timeout**: Klien mengirim naskah dan langsung menerima `202 Accepted` bersama `jobId` dalam hitungan milidetik.
@@ -80,10 +80,12 @@ Semua endpoint pembuatan suara dan manajemen job dilindungi dengan autentikasi A
    ```
 
 > [!TIP]
-> Kunci API default dikonfigurasi di file [`.env`](file:///c:/Users/Jerry/Documents/CODING/austudio-playwright/.env):
+> Kunci API dikonfigurasi di file [`.env`](.env) pada variabel `API_KEY`:
 > ```env
-> AISTUDION_API_KEY=IkPzTzClQrVGj73OMWIm7TPkRTHnlj7M
+> PORT=3740
+> API_KEY=<API_KEY>
 > ```
+> Server juga menerima alias `AISTUDIO_API_KEY`, `AISTUDION_API_KEY`, dan `AUSTUDIO_API_KEY`. Jika semuanya kosong, server memakai kunci default bawaan kode.
 
 ---
 
@@ -95,7 +97,7 @@ Mendaftarkan pekerjaan pembuatan audio TTS baru ke dalam antrian dan langsung me
 #### Headers
 ```http
 Content-Type: application/json
-x-api-key: IkPzTzClQrVGj73OMWIm7TPkRTHnlj7M
+x-api-key: <API_KEY>
 ```
 
 #### Request Body Parameters
@@ -132,7 +134,7 @@ x-api-key: IkPzTzClQrVGj73OMWIm7TPkRTHnlj7M
   "jobId": "job_1788840812023_3fa32cbd",
   "status": "queued",
   "queuePosition": 1,
-  "statusUrl": "http://localhost:3000/api/tts/jobs/job_1788840812023_3fa32cbd",
+  "statusUrl": "http://localhost:3740/api/tts/jobs/job_1788840812023_3fa32cbd",
   "job": {
     "id": "job_1788840812023_3fa32cbd",
     "status": "queued",
@@ -195,25 +197,25 @@ Mengecek status pengerjaan naskah berdasarkan ID pekerjaan. Saat berstatus `comp
     "createdAt": "2026-09-25T14:20:00.000Z",
     "startedAt": "2026-09-25T14:20:01.000Z",
     "completedAt": "2026-09-25T14:21:29.000Z",
-    "audioUrl": "http://localhost:3000/api/tts/download/gemini_tts_1790307783764_merged.mp3",
-    "audio_url": "http://localhost:3000/api/tts/download/gemini_tts_1790307783764_merged.mp3",
-    "downloadUrl": "http://localhost:3000/api/tts/download/gemini_tts_1790307783764_merged.mp3",
+    "audioUrl": "http://localhost:3740/api/tts/download/gemini_tts_1790307783764_merged.mp3",
+    "audio_url": "http://localhost:3740/api/tts/download/gemini_tts_1790307783764_merged.mp3",
+    "downloadUrl": "http://localhost:3740/api/tts/download/gemini_tts_1790307783764_merged.mp3",
     "mergedFile": {
       "filename": "gemini_tts_1790307783764_merged.mp3",
-      "url": "http://localhost:3000/api/tts/download/gemini_tts_1790307783764_merged.mp3",
-      "audio_url": "http://localhost:3000/api/tts/download/gemini_tts_1790307783764_merged.mp3",
+      "url": "http://localhost:3740/api/tts/download/gemini_tts_1790307783764_merged.mp3",
+      "audio_url": "http://localhost:3740/api/tts/download/gemini_tts_1790307783764_merged.mp3",
       "sizeBytes": 3812249,
       "sizeKb": "3722.9",
       "isMerged": true,
       "totalParts": 2
     },
     "result": {
-      "url": "http://localhost:3000/api/tts/download/gemini_tts_1790307783764_merged.mp3",
-      "audio_url": "http://localhost:3000/api/tts/download/gemini_tts_1790307783764_merged.mp3",
-      "audioUrl": "http://localhost:3000/api/tts/download/gemini_tts_1790307783764_merged.mp3",
+      "url": "http://localhost:3740/api/tts/download/gemini_tts_1790307783764_merged.mp3",
+      "audio_url": "http://localhost:3740/api/tts/download/gemini_tts_1790307783764_merged.mp3",
+      "audioUrl": "http://localhost:3740/api/tts/download/gemini_tts_1790307783764_merged.mp3",
       "audio_urls": [
-        "http://localhost:3000/api/tts/download/gemini_tts_1790307783764_part1.mp3",
-        "http://localhost:3000/api/tts/download/gemini_tts_1790307783764_part2.mp3"
+        "http://localhost:3740/api/tts/download/gemini_tts_1790307783764_part1.mp3",
+        "http://localhost:3740/api/tts/download/gemini_tts_1790307783764_part2.mp3"
       ],
       "totalChunks": 2,
       "voiceSettings": {
@@ -224,7 +226,7 @@ Mengecek status pengerjaan naskah berdasarkan ID pekerjaan. Saat berstatus `comp
       },
       "mergedFile": {
         "filename": "gemini_tts_1790307783764_merged.mp3",
-        "url": "http://localhost:3000/api/tts/download/gemini_tts_1790307783764_merged.mp3",
+        "url": "http://localhost:3740/api/tts/download/gemini_tts_1790307783764_merged.mp3",
         "sizeBytes": 3812249,
         "sizeKb": "3722.9",
         "isMerged": true,
@@ -235,7 +237,7 @@ Mengecek status pengerjaan naskah berdasarkan ID pekerjaan. Saat berstatus `comp
           "partIndex": 1,
           "totalParts": 2,
           "filename": "gemini_tts_1790307783764_part1.mp3",
-          "url": "http://localhost:3000/api/tts/download/gemini_tts_1790307783764_part1.mp3",
+          "url": "http://localhost:3740/api/tts/download/gemini_tts_1790307783764_part1.mp3",
           "sizeBytes": 2439372,
           "sizeKb": "2382.2",
           "wordCount": 299
@@ -244,7 +246,7 @@ Mengecek status pengerjaan naskah berdasarkan ID pekerjaan. Saat berstatus `comp
           "partIndex": 2,
           "totalParts": 2,
           "filename": "gemini_tts_1790307783764_part2.mp3",
-          "url": "http://localhost:3000/api/tts/download/gemini_tts_1790307783764_part2.mp3",
+          "url": "http://localhost:3740/api/tts/download/gemini_tts_1790307783764_part2.mp3",
           "sizeBytes": 1373280,
           "sizeKb": "1341.1",
           "wordCount": 150
@@ -268,7 +270,7 @@ Melihat daftar seluruh pekerjaan, status antrian, dan ringkasan statistik.
 #### Contoh Request:
 ```http
 GET /api/tts/jobs?status=completed&limit=10
-x-api-key: IkPzTzClQrVGj73OMWIm7TPkRTHnlj7M
+x-api-key: <API_KEY>
 ```
 
 #### Contoh Response:
@@ -320,9 +322,9 @@ Endpoint multifungsi yang kompatibel dengan script lama:
 
 #### Contoh Pemanggilan Sinkron:
 ```bash
-curl -X POST "http://localhost:3000/api/tts/generate?sync=true" \
+curl -X POST "http://localhost:3740/api/tts/generate?sync=true" \
   -H "Content-Type: application/json" \
-  -H "x-api-key: IkPzTzClQrVGj73OMWIm7TPkRTHnlj7M" \
+  -H "x-api-key: <API_KEY>" \
   -d '{"text": "Halo dunia!", "voice": "Achernar"}'
 ```
 
@@ -339,7 +341,7 @@ Endpoint terpadu untuk mengambil atau memutar langsung file audio hasil pekerjaa
 ### 7. `GET /api/tts/download/:filename`
 Memutar (*stream*) atau mengunduh berkas audio `.mp3` atau `.wav` langsung via URL nama file atau ID pekerjaan.
 
-* **URL Contoh**: `http://localhost:3000/api/tts/download/gemini_tts_1790307783764_merged.mp3`
+* **URL Contoh**: `http://localhost:3740/api/tts/download/gemini_tts_1790307783764_merged.mp3`
 * **Direct Audio Stream**: Mendukung HTTP Range (`Accept-Ranges: bytes`) untuk pemutar HTML5 audio (`<audio src="...">`), streaming player, dan scrubbing.
 * **Download Attachment**: Berikan query `?download=1` untuk memaksa unduh sebagai file attachment.
 
@@ -351,17 +353,20 @@ Mengecek kondisi server, status mesin TTS, dan statistik antrian.
 #### Contoh Response `GET /api/health`:
 ```json
 {
-  "status": "healthy",
-  "service": "AuStudio Gemini TTS API",
+  "status": "ok",
+  "service": "Google AI Studio TTS API",
   "uptimeSeconds": 240,
   "timestamp": "2026-09-08T04:15:00.000Z",
+  "authRequired": true,
   "jobs": {
     "total": 12,
     "queued": 0,
     "processing": 0,
     "completed": 12,
     "failed": 0,
-    "isBusy": false
+    "cancelled": 0,
+    "isBusy": false,
+    "currentJobId": null
   },
   "ttsEngine": {
     "isBusy": false,
@@ -369,6 +374,94 @@ Mengecek kondisi server, status mesin TTS, dan statistik antrian.
   }
 }
 ```
+
+> `status` selalu `"ok"` selama proses HTTP hidup. Kegagalan job tidak mengubah status server — periksa `jobs.failed` dan `error` pada masing-masing job.
+>
+> Alias: `GET /health` (tanpa auth) memberi payload yang sama, dan `GET /api/tts/status` merangkum engine + antrean.
+
+---
+
+### 9. `GET /api/status` (Status Chrome & Recorder)
+Menampilkan path Chrome yang terdeteksi serta status perekam dan replay.
+
+- **Autentikasi**: Wajib
+- **Response `200 OK`**:
+```json
+{
+  "chromePath": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+  "recorder": {
+    "isRecording": false,
+    "isPaused": false,
+    "sessionName": null,
+    "totalSteps": 0,
+    "steps": []
+  },
+  "runner": {
+    "isRunning": false,
+    "currentStep": 0,
+    "totalSteps": 0
+  }
+}
+```
+
+---
+
+### 10. `GET /api/tts/voices` (Daftar Suara & Preset)
+Mengembalikan daftar suara resmi beserta preset gaya, pace, dan accent yang didukung.
+
+- **Autentikasi**: Wajib
+- **Response `200 OK`**:
+```json
+{
+  "success": true,
+  "defaultVoice": "Zephyr",
+  "voices": [
+    { "name": "Zephyr", "gender": "Dynamic", "isDefault": true, "description": "Calm, smooth, versatile, and balanced (Default)" }
+  ],
+  "styles": ["Vocal Smile", "Newscaster", "Whisper", "Empathetic", "Promo/Hype", "Deadpan"],
+  "paces": ["Natural", "Rapid Fire", "The Drift", "Staccato"],
+  "accents": ["Neutral", "American (Gen)", "American (Valley)", "American (South)", "British (RP)", "British (Brixton)", "Transatlantic", "Australian"]
+}
+```
+
+> Server otomatis mengoreksi typo nama suara umum (mis. `zhepyr` menjadi `Zephyr`).
+
+---
+
+### 11. `POST /shutdown`
+Menghentikan server secara halus (*graceful shutdown*). Dipakai oleh `scripts/runner.js` saat `3-STOP-ALL.bat`; hanya menerima panggilan dari localhost.
+
+- **Autentikasi**: Wajib
+- **Response `202 Accepted`**:
+```json
+{
+  "status": "shutting_down"
+}
+```
+
+---
+
+## ⚙️ Konfigurasi Environment (`.env`)
+
+| Variabel | Tipe | Default | Deskripsi |
+| :--- | :--- | :--- | :--- |
+| `PORT` | `number` | `3740` | Port HTTP REST API server |
+| `API_KEY` | `string` | kunci bawaan kode | Kunci autentikasi (`x-api-key` / `Authorization: Bearer` / `?key=`) |
+| `OFFSCREEN` | `boolean` | `true` | `true` = jendela Chrome disembunyikan di luar layar (`-10000,-10000`); `false` = jendela **tampil di layar** sehingga proses generate bisa dipantau/didiagnosis |
+| `KEEP_BROWSER_OPEN` | `boolean` | `false` | `true` = browser **tidak** pernah ditutup otomatis. Default: browser tetap hidup antar job lalu ditutup setelah `SESSION_IDLE_MS` idle |
+| `SESSION_IDLE_MS` | `number` | `120000` | Lama browser + halaman AI Studio dibiarkan hidup tanpa job sebelum ditutup (ms). Job berikutnya dalam rentang ini tidak perlu launch Chrome/load AI Studio lagi |
+| `MAX_JOBS_PER_SESSION` | `number` | `25` | Daur ulang halaman AI Studio setiap N job agar state UI tetap segar |
+| `DOWNLOAD_TIMEOUT_MS` | `number` | `12000` | Batas tunggu event download / blob audio per percobaan (ms) |
+| `PREWARM_BROWSER` | `boolean` | `false` | `true` = buka browser + AI Studio saat service start sehingga job pertama tidak cold-start |
+
+Contoh untuk memantau browser saat mendiagnosis:
+```env
+PORT=3740
+API_KEY=<API_KEY>
+OFFSCREEN=false
+```
+
+> Perubahan `.env` hanya berlaku setelah service di-restart (`3-STOP-ALL.bat` lalu `1-START-ALL.bat`).
 
 ---
 
@@ -378,8 +471,8 @@ Berikut panduan implementasi pola Jobs (Kirim Tugas ➔ Tunggu Selesai ➔ Ambil
 
 ### 1. Node.js (JavaScript / Fetch)
 ```javascript
-const API_KEY = 'IkPzTzClQrVGj73OMWIm7TPkRTHnlj7M';
-const BASE_URL = 'http://localhost:3000';
+const API_KEY = '<API_KEY>';
+const BASE_URL = 'http://localhost:3740';
 
 async function generateWithJobs(text, voice = 'Achernar') {
   console.log('1. Mengirim pekerjaan TTS baru...');
@@ -446,8 +539,8 @@ generateWithJobs('Halo semuanya! Ini adalah uji coba teknik jobs yang sangat sta
 import time
 import requests
 
-API_KEY = "IkPzTzClQrVGj73OMWIm7TPkRTHnlj7M"
-BASE_URL = "http://localhost:3000"
+API_KEY = "<API_KEY>"
+BASE_URL = "http://localhost:3740"
 HEADERS = {
     "Content-Type": "application/json",
     "x-api-key": API_KEY
@@ -508,8 +601,8 @@ if __name__ == "__main__":
 
 ### 3. Windows PowerShell (`Invoke-RestMethod`)
 ```powershell
-$apiKey = "IkPzTzClQrVGj73OMWIm7TPkRTHnlj7M"
-$baseUrl = "http://localhost:3000"
+$apiKey = "<API_KEY>"
+$baseUrl = "http://localhost:3740"
 $headers = @{
     "Content-Type" = "application/json"
     "x-api-key" = $apiKey
@@ -550,9 +643,9 @@ if ($job.status -eq "completed") {
 
 #### A. Kirim Naskah (Submit Job):
 ```bash
-curl -X POST http://localhost:3000/api/tts/jobs \
+curl -X POST http://localhost:3740/api/tts/jobs \
   -H "Content-Type: application/json" \
-  -H "x-api-key: IkPzTzClQrVGj73OMWIm7TPkRTHnlj7M" \
+  -H "x-api-key: <API_KEY>" \
   -d '{
     "text": "Halo! Ini adalah pengujian naskah via cURL.",
     "voice": "Achernar",
@@ -562,23 +655,23 @@ curl -X POST http://localhost:3000/api/tts/jobs \
 
 #### B. Cek Status Pekerjaan:
 ```bash
-curl -X GET http://localhost:3000/api/tts/jobs/job_1788840812023_3fa32cbd \
-  -H "x-api-key: IkPzTzClQrVGj73OMWIm7TPkRTHnlj7M"
+curl -X GET http://localhost:3740/api/tts/jobs/job_1788840812023_3fa32cbd \
+  -H "x-api-key: <API_KEY>"
 ```
 
 #### C. Unduh Berkas Audio Hasil:
 ```bash
-curl -o hasil.wav http://localhost:3000/api/tts/download/gemini_tts_1788840850123_part1.wav
+curl -o hasil.wav http://localhost:3740/api/tts/download/gemini_tts_1788840850123_part1.wav
 ```
 
 ---
 
 ## 📡 Live Real-Time Updates via WebSocket
 
-Untuk antarmuka pengguna grafis (Web Dashboard) atau aplikasi yang ingin menampilkan *progress bar* tanpa teknik polling berkala, server menyediakan siaran WebSocket langsung di `ws://localhost:3000`:
+Untuk antarmuka pengguna grafis (Web Dashboard) atau aplikasi yang ingin menampilkan *progress bar* tanpa teknik polling berkala, server menyediakan siaran WebSocket langsung di `ws://localhost:3740`:
 
 ```javascript
-const ws = new WebSocket('ws://localhost:3000');
+const ws = new WebSocket('ws://localhost:3740');
 
 ws.onmessage = (event) => {
   const { type, data } = JSON.parse(event.data);
@@ -620,4 +713,4 @@ ws.onmessage = (event) => {
 | `401 Unauthorized` | Kunci Hilang | Header `x-api-key` belum disertakan dalam request. |
 | `403 Forbidden` | Kunci Salah | Nilai `x-api-key` tidak cocok dengan server `.env`. |
 | `404 Not Found` | Tidak Ditemukan | `jobId` atau file audio tidak ditemukan di server. |
-| `500 Internal Error` | Kendala Mesin | Terjadi error pada peramban Chrome Playwright atau sesi Google AI Studio. Jalankan `LOGIN.bat` untuk memperbarui sesi Google Anda. |
+| `500 Internal Error` | Kendala Mesin | Terjadi error pada peramban Chrome Playwright atau sesi Google AI Studio. Jalankan `npm run open-browser` (atau `open-browser.bat`) untuk memperbarui sesi Google Anda. |
