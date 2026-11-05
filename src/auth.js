@@ -22,7 +22,7 @@ function loadEnv() {
 
 loadEnv();
 
-const DEFAULT_API_KEY = process.env.API_KEY || process.env.AISTUDION_API_KEY || process.env.AISTUDIO_API_KEY || process.env.AUSTUDIO_API_KEY || 'IkPzTzClQrVGj73OMWIm7TPkRTHnlj7M';
+const DEFAULT_API_KEY = process.env.API_KEY || process.env.AISTUDION_API_KEY || process.env.AISTUDIO_API_KEY || process.env.AUSTUDIO_API_KEY || '';
 
 /**
  * Middleware to protect API routes with API Key

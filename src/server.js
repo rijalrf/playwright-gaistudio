@@ -137,7 +137,7 @@ function startServer(port) {
     console.log('====================================================');
     console.log('Google AI Studio TTS - Playwright Automation Server');
     console.log(`URL: http://localhost:${port}`);
-    console.log(`API Key Auth: Aktif (${process.env.API_KEY || process.env.AUSTUDIO_API_KEY ? 'Custom Key' : 'Default Key: ' + DEFAULT_API_KEY})`);
+    console.log(`API Key Auth: Aktif (${DEFAULT_API_KEY ? 'Custom Key' : 'API_KEY belum diisi, semua request ditolak'})`);
     console.log(`TTS Jobs Endpoint: POST http://localhost:${port}/api/tts/jobs`);
     console.log(`TTS Jobs Status:   GET  http://localhost:${port}/api/tts/jobs/:id`);
     console.log('Stealth Engine: Aktif (Anti-bot detection bypass)');
